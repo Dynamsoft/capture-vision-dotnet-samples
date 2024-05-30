@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dynamsoft.DotNet.CaptureVisionRouter" Version="2.2.30" />
+    <PackageReference Include="Dynamsoft.DotNet.Core" Version="3.2.30" />
+    <PackageReference Include="Dynamsoft.DotNet.LabelRecognizer" Version="3.2.30" />
+	<PackageReference Include="Dynamsoft.DotNet.ImageProcessing" Version="2.2.30" />
+	<PackageReference Include="Dynamsoft.DotNet.NeuralNetwork" Version="1.0.20" />
+	<PackageReference Include="Dynamsoft.DotNet.CharacterModel.MRZ" Version="1.0.0" />
+    <PackageReference Include="Dynamsoft.DotNet.License" Version="3.2.20" />
+    <PackageReference Include="Dynamsoft.DotNet.Utility" Version="1.2.20" />
+	    <PackageReference Include="Dynamsoft.DotNet.CodeParser" Version="2.2.20" />
+		    <PackageReference Include="Dynamsoft.DotNet.CodeParserDedicator" Version="1.2.20" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy MRZ.json $(OutputPath)" />
+  </Target>
+
+</Project>
