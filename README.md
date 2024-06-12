@@ -22,15 +22,17 @@ This repository contains multiple samples that demonstrate how to use the [Dynam
 
 | Sample            | Description |
 |---------------|----------------------|
-|[`CaptureFromAnImage`](Samples/HelloWorld/CaptureFromAnImage)          | This sample demonstrates the simplest way to capture content from an image file with Dynamsoft Capture Vision SDK.            |
-|[`CaptureFromMultipleImages`](Samples/HelloWorld/CaptureFromMultipleImages)          | This sample demonstrates the simplest way to capture content from image files in a directory with Dynamsoft Capture Vision SDK.            |
-|[`MRZScanner`](Samples/UseCases/MRZScanner)          | This sample demonstrates the way to capture and extract user's information from machine-readable travel documents with Dynamsoft Capture Vision SDK.            |
+|[`CaptureFromAnImage`](Samples/HelloWorld/CaptureFromAnImage)          | The simplest way to capture content from an image file with Dynamsoft Capture Vision SDK.            |
+|[`CaptureFromMultipleImages`](Samples/HelloWorld/CaptureFromMultipleImages)          | The simplest way to capture content from image files in a directory with Dynamsoft Capture Vision SDK.            |
+|[`MRZScanner`](Samples/UseCases/MRZScanner)          | Capture and extract user's information from machine-readable travel documents with Dynamsoft Capture Vision SDK.            |
+|[`DriverLicenseScanner`](Samples/UseCases/DriverLicenseScanner)          | Capture and extract user's information from driver license/ID with Dynamsoft Capture Vision SDK.            |
+|[`VINScanner`](Samples/UseCases/VINScanner)          | Capture and extract vehicle's information from Vehicle Identification Number (VIN) with Dynamsoft Capture Vision SDK.            |
 
 ## License
 
 The library requires a license to work, you use the API `LicenseManager.InitLicense` to initialize license key and activate the SDK.
 
-These samples use a free public trial license which require network connection to function. You can request a 30-day free trial license key from <a href="https://www.dynamsoft.com/customer/license/trialLicense?product=cvs&utm_source=github&package=dotnet" target="_blank">Customer Portal</a> which works offline.
+These samples use a free public trial license which require network connection to function. You can request a 30-day free trial license via the <a href="https://www.dynamsoft.com/customer/license/trialLicense?product=cvs&utm_source=github&package=dotnet" target="_blank">Request a Trial License</a> link which works offline.
 
 ## Contact Us
 

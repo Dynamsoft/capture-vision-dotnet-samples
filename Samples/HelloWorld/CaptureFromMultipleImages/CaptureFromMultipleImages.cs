@@ -79,37 +79,39 @@ namespace CaptureFromMultipleImages
             int errorCode = 1;
             string errorMsg;
             errorCode = LicenseManager.InitLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9", out errorMsg);
-            if (errorCode != (int)EnumErrorCode.EC_OK)
+            if (errorCode != (int)EnumErrorCode.EC_OK && errorCode != (int)EnumErrorCode.EC_LICENSE_CACHE_USED)
             {
-                Console.WriteLine("License initialization: " + errorCode + "," + errorMsg);
+                Console.WriteLine("License initialization failed: ErrorCode: " + errorCode + ", ErrorString: " + errorMsg);
             }
-            using (CaptureVisionRouter cvr = new CaptureVisionRouter())
-            using (DirectoryFetcher fetcher = new DirectoryFetcher())
+            else
             {
-
-                string? imgPath = null;
-                while (imgPath == null)
+                using (CaptureVisionRouter cvr = new CaptureVisionRouter())
+                using (DirectoryFetcher fetcher = new DirectoryFetcher())
                 {
-                    Console.WriteLine(">> Input your image directory full path:");
-                    imgPath = Console.ReadLine();
-                }
 
-                fetcher.SetDirectory(imgPath);
-                cvr.SetInput(fetcher);
+                    string? imgPath = null;
+                    while (imgPath == null)
+                    {
+                        Console.WriteLine(">> Input your image directory full path:");
+                        imgPath = Console.ReadLine();
+                    }
 
-                CapturedResultReceiver receiver = new MyCapturedResultReceiver();
-                cvr.AddResultReceiver(receiver);
+                    fetcher.SetDirectory(imgPath);
+                    cvr.SetInput(fetcher);
 
-                MyImageSourceStateListener listener = new MyImageSourceStateListener(cvr);
-                cvr.AddImageSourceStateListener(listener);
+                    CapturedResultReceiver receiver = new MyCapturedResultReceiver();
+                    cvr.AddResultReceiver(receiver);
 
-                errorCode = cvr.StartCapturing(PresetTemplate.PT_DEFAULT, true, out errorMsg);
-                if (errorCode != (int)EnumErrorCode.EC_OK)
-                {
-                    Console.WriteLine("error: " + errorMsg);
+                    MyImageSourceStateListener listener = new MyImageSourceStateListener(cvr);
+                    cvr.AddImageSourceStateListener(listener);
+
+                    errorCode = cvr.StartCapturing(PresetTemplate.PT_DEFAULT, true, out errorMsg);
+                    if (errorCode != (int)EnumErrorCode.EC_OK)
+                    {
+                        Console.WriteLine("error: " + errorMsg);
+                    }
                 }
             }
-
             Console.WriteLine("Press any key to quit...");
             Console.Read();
         }

@@ -8,18 +8,6 @@
       ],
       "SemanticProcessingNameArray":  ["sp-mrz"],
       "Timeout": 1000000
-    },
-    {
-      "Name": "FrenchId-td2",
-      "ImageROIProcessingNameArray": [
-        "roi-FrenchId-td2"
-      ]
-    },
-    {
-      "Name": "SuissDL",
-      "ImageROIProcessingNameArray": [
-        "roi-SuissDL"
-      ]
     }
   ],
   "TargetROIDefOptions": [
@@ -27,18 +15,6 @@
       "Name": "roi-mrz",
       "TaskSettingNameArray": [
         "task-mrz"
-      ]
-    },
-    {
-      "Name": "roi-FrenchId-td2",
-      "TaskSettingNameArray": [
-        "task-FrenchId-td2"
-      ]
-    },
-    {
-      "Name": "roi-SuissDL",
-      "TaskSettingNameArray": [
-        "task-SuissDL"
       ]
     }
   ],
@@ -154,54 +130,6 @@
       ]
     },
     {
-      "Name": "tls-mrz-FrenchId-td2",
-      "BaseTextLineSpecificationName": "tls-base",
-      "StringLengthRange": [ 36, 36 ],
-      "OutputResults": 1,
-      "ExpectedGroupsCount": 1,
-      "ConcatResults": 1,
-      "ConcatSeparator": "",
-      "SubGroups": [
-        {
-          "StringRegExPattern": "(I[A-Z<])(FRA)([A-Z<]{25})([A-Z0-9<]{3})([0-9<]{3}){(36)}",
-          "StringLengthRange": [ 36, 36 ],
-          "BaseTextLineSpecificationName": "tls-base"
-        },
-        {
-          "StringRegExPattern": "([A-Z0-9]{12}[0-9][A-Z<]{14}[0-9]{2}[(01-12)][(01-31)][0-9][MF<][0-9]){(36)}",
-          "StringLengthRange": [ 36, 36 ],
-          "BaseTextLineSpecificationName": "tls-base"
-        }
-      ]
-    },
-    {
-      "Name": "tls-mrz-SuissDL",
-      "BaseTextLineSpecificationName": "tls-base",
-      "StringLengthRange": [ 9, 30 ],
-      "OutputResults": 1,
-
-      "ExpectedGroupsCount": 1,
-      "ConcatResults": 1,
-      "ConcatSeparator": "",
-      "SubGroups": [
-        {
-          "StringRegExPattern": "([A-Z0-9]{3}[0-9]{3}[DFIR](<<)){(9)}",
-          "StringLengthRange": [ 9, 9 ],
-          "BaseTextLineSpecificationName": "tls-base"
-        },
-        {
-          "StringRegExPattern": "(FACHE[0-9]{12}(<<)[0-9]{2}[(01-12)][(01-31)][<]{5}){(30)}",
-          "StringLengthRange": [ 30, 30 ],
-          "BaseTextLineSpecificationName": "tls-base"
-        },
-        {
-          "StringRegExPattern": "([A-Z<]{30}){(30)}",
-          "StringLengthRange": [ 30, 30 ],
-          "BaseTextLineSpecificationName": "tls-base"
-        }
-      ]
-    },
-    {
       "Name": "tls-base",
       "CharacterModelName": "MRZ",
       "CharHeightRange": [ 5, 1000, 1 ],
@@ -229,44 +157,6 @@
       "Name": "task-mrz",
       "ConfusableCharactersPath": "ConfusableChars.data",
       "TextLineSpecificationNameArray": [ "tls-mrz-passport", "tls-mrz-visa-td3", "tls-mrz-id-td1", "tls-mrz-id-td2", "tls-mrz-visa-td2" ],
-      "SectionImageParameterArray": [
-        {
-          "Section": "ST_REGION_PREDETECTION",
-          "ImageParameterName": "ip-mrz"
-        },
-        {
-          "Section": "ST_TEXT_LINE_LOCALIZATION",
-          "ImageParameterName": "ip-mrz"
-        },
-        {
-          "Section": "ST_TEXT_LINE_RECOGNITION",
-          "ImageParameterName": "ip-mrz"
-        }
-      ]
-    },
-    {
-      "Name": "task-FrenchId-td2",
-      "ConfusableCharactersPath": "ConfusableChars.data",
-      "TextLineSpecificationNameArray": [ "tls-mrz-FrenchId-td2" ],
-      "SectionImageParameterArray": [
-        {
-          "Section": "ST_REGION_PREDETECTION",
-          "ImageParameterName": "ip-mrz"
-        },
-        {
-          "Section": "ST_TEXT_LINE_LOCALIZATION",
-          "ImageParameterName": "ip-mrz"
-        },
-        {
-          "Section": "ST_TEXT_LINE_RECOGNITION",
-          "ImageParameterName": "ip-mrz"
-        }
-      ]
-    },
-    {
-      "Name": "task-SuissDL",
-      "ConfusableCharactersPath": "ConfusableChars.data",
-      "TextLineSpecificationNameArray": [ "tls-mrz-SuissDL" ],
       "SectionImageParameterArray": [
         {
           "Section": "ST_REGION_PREDETECTION",
