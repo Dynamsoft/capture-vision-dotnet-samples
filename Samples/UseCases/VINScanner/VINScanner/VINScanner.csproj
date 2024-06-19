@@ -8,10 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dynamsoft.DotNet.CaptureVisionRouter" Version="2.2.31" />
-    <PackageReference Include="Dynamsoft.DotNet.Core" Version="3.2.30" />
-    <PackageReference Include="Dynamsoft.DotNet.BarcodeReader" Version="10.2.11" />
-    <PackageReference Include="Dynamsoft.DotNet.LabelRecognizer" Version="3.2.31" />
+    <PackageReference Include="Dynamsoft.DotNet.CaptureVisionRouter" Version="2.2.32" />
+    <PackageReference Include="Dynamsoft.DotNet.Core" Version="3.2.31" />
+    <PackageReference Include="Dynamsoft.DotNet.BarcodeReader" Version="10.2.12" />
+    <PackageReference Include="Dynamsoft.DotNet.LabelRecognizer" Version="3.2.32" />
     <PackageReference Include="Dynamsoft.DotNet.ImageProcessing" Version="2.2.30" />
     <PackageReference Include="Dynamsoft.DotNet.NeuralNetwork" Version="1.0.20" />
     <PackageReference Include="Dynamsoft.DotNet.CharacterModel.VIN" Version="1.0.0" />
