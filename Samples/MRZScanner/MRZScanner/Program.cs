@@ -1,7 +1,6 @@
 ﻿using Dynamsoft.Core;
 using Dynamsoft.CVR;
 using Dynamsoft.License;
-using Dynamsoft.Utility;
 using Dynamsoft.DCP;
 
 namespace MRZScanner
@@ -40,59 +39,34 @@ namespace MRZScanner
             }
 
             string? line;
-            if (docType == "MRTD_TD1_ID")
+            line = item.GetFieldValue("line1");
+            if (line != null)
             {
-                line = item.GetFieldValue("line1");
-                if (line != null)
+                if (item.GetFieldValidationStatus("line1") == EnumValidationStatus.VS_FAILED)
                 {
-                    if (item.GetFieldValidationStatus("line1") == EnumValidationStatus.VS_FAILED)
-                    {
-                        line += ", Validation Failed";
-                    }
-                    rawText.Add(line);
+                    line += ", Validation Failed";
                 }
-
-                line = item.GetFieldValue("line2");
-                if (line != null)
-                {
-                    if (item.GetFieldValidationStatus("line2") == EnumValidationStatus.VS_FAILED)
-                    {
-                        line += ", Validation Failed";
-                    }
-                    rawText.Add(line);
-                }
-
-                line = item.GetFieldValue("line3");
-                if (line != null)
-                {
-                    if (item.GetFieldValidationStatus("line3") == EnumValidationStatus.VS_FAILED)
-                    {
-                        line += ", Validation Failed";
-                    }
-                    rawText.Add(line);
-                }
+                rawText.Add(line);
             }
-            else
-            {
-                line = item.GetFieldValue("line1");
-                if (line != null)
-                {
-                    if (item.GetFieldValidationStatus("line1") == EnumValidationStatus.VS_FAILED)
-                    {
-                        line += ", Validation Failed";
-                    }
-                    rawText.Add(line);
-                }
 
-                line = item.GetFieldValue("line2");
-                if (line != null)
+            line = item.GetFieldValue("line2");
+            if (line != null)
+            {
+                if (item.GetFieldValidationStatus("line2") == EnumValidationStatus.VS_FAILED)
                 {
-                    if (item.GetFieldValidationStatus("line2") == EnumValidationStatus.VS_FAILED)
-                    {
-                        line += ", Validation Failed";
-                    }
-                    rawText.Add(line);
+                    line += ", Validation Failed";
                 }
+                rawText.Add(line);
+            }
+
+            line = item.GetFieldValue("line3");
+            if (line != null)
+            {
+                if (item.GetFieldValidationStatus("line3") == EnumValidationStatus.VS_FAILED)
+                {
+                    line += ", Validation Failed";
+                }
+                rawText.Add(line);
             }
 
             if (item.GetFieldValidationStatus("nationality") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("nationality") != null)
@@ -147,10 +121,9 @@ namespace MRZScanner
         }
     }
 
-    class MyCapturedResultReceiver : CapturedResultReceiver
+    internal class Program
     {
-
-        public override void OnParsedResultsReceived(ParsedResult result)
+        public static void PrintResult(ParsedResult result)
         {
             FileImageTag? tag = (FileImageTag?)result.GetOriginalImageTag();
             Console.WriteLine("File: " + tag?.GetFilePath());
@@ -170,29 +143,7 @@ namespace MRZScanner
             }
             Console.WriteLine();
         }
-    }
-    class MyImageSourceStateListener : IImageSourceStateListener
-    {
-        private CaptureVisionRouter cvr;
-        public MyImageSourceStateListener(CaptureVisionRouter cvr)
-        {
-            this.cvr = cvr;
-        }
 
-        public void OnImageSourceStateReceived(EnumImageSourceState state)
-        {
-            if (state == EnumImageSourceState.ISS_EXHAUSTED)
-            {
-                if (cvr != null)
-                {
-                    cvr.StopCapturing();
-                }
-            }
-        }
-    }
-
-    internal class Program
-    {
         static void Main(string[] args)
         {
             Console.WriteLine("*************************************************");
@@ -202,8 +153,9 @@ namespace MRZScanner
             int errorCode = 1;
             string errorMsg;
 
-            // You can request and extend a trial license from https://www.dynamsoft.com/customer/license/trialLicense?product=cvs&utm_source=samples
-            // The string "DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9" here is a free public trial license. Note that network connection is required for this license to work.
+            // Initialize license.
+            // You can request and extend a trial license from https://www.dynamsoft.com/customer/license/trialLicense?product=dcv&utm_source=samples&package=dotnet
+            // The string 'DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9' here is a free public trial license. Note that network connection is required for this license to work.
             errorCode = LicenseManager.InitLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9", out errorMsg);
             if (errorCode != (int)EnumErrorCode.EC_OK && errorCode != (int)EnumErrorCode.EC_LICENSE_CACHE_USED)
             {
@@ -212,43 +164,50 @@ namespace MRZScanner
             else
             {
                 using (CaptureVisionRouter cvr = new CaptureVisionRouter())
-                using (DirectoryFetcher fetcher = new DirectoryFetcher())
                 {
-                    errorCode = cvr.InitSettingsFromFile("MRZ.json", out errorMsg);
-                    if (errorCode != (int)EnumErrorCode.EC_OK)
+                    while (true)
                     {
-                        Console.WriteLine("MRZ template initialization failed: " + errorMsg);
-                    }
-                    else
-                    {
-                        while (true)
+                        Console.WriteLine("\n>> Input your image full path:");
+                        Console.WriteLine("\n>> 'Enter' for sample image or 'Q'/'q' to quit");
+                        string? imagePath = Console.ReadLine();
+                        if (imagePath.ToLower() == "q")
                         {
-                            Console.WriteLine("\n>> Enter the image directory path (or 'Q'/'q' to quit):");
-                            string? imagePath = Console.ReadLine();
-                            if (string.IsNullOrEmpty(imagePath))
-                            {
-                                Console.WriteLine("Invalid directory path.");
-                                continue;
-                            }
-                            if (imagePath.ToLower() == "q")
-                            {
-                                return;
-                            }
-                            if (!Directory.Exists(imagePath))
-                            {
-                                Console.WriteLine("The directory does not exist.");
-                                continue;
-                            }
-                            fetcher.SetDirectory(imagePath);
-                            cvr.SetInput(fetcher);
+                            return;
+                        }
+                        if (string.IsNullOrEmpty(imagePath))
+                        {
+                            imagePath = "../../../../../../Images/passport-sample.jpg";
+                        }
+                        string imagePathTrim = imagePath.Trim('\"');
+                        if (!File.Exists(imagePathTrim))
+                        {
+                            Console.WriteLine("The image does not exist.");
+                            continue;
+                        }
 
-                            CapturedResultReceiver receiver = new MyCapturedResultReceiver();
-                            cvr.AddResultReceiver(receiver);
+                        using (CapturedResult? result = cvr.Capture(imagePathTrim, "ReadPassportAndId"))
+                        {
+                            if (result == null)
+                            {
+                                Console.WriteLine("No parsed results.");
+                            }
+                            else
+                            {
 
-                            MyImageSourceStateListener listener = new MyImageSourceStateListener(cvr);
-                            cvr.AddImageSourceStateListener(listener);
-
-                            errorCode = cvr.StartCapturing("", true, out errorMsg);
+                                if (result.GetErrorCode() != 0)
+                                {
+                                    Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
+                                }
+                                ParsedResult? parsedResult = result.GetParsedResult();
+                                if (parsedResult == null || parsedResult.GetItems().Length == 0)
+                                {
+                                    Console.WriteLine("No parsed results.");
+                                }
+                                else
+                                {
+                                    PrintResult(parsedResult);
+                                }
+                            }
                         }
                     }
                 }

@@ -1,9 +1,7 @@
 ﻿using Dynamsoft.Core;
 using Dynamsoft.CVR;
 using Dynamsoft.License;
-using Dynamsoft.Utility;
 using Dynamsoft.DCP;
-using System;
 
 namespace MRZScanner
 {
@@ -23,7 +21,7 @@ namespace MRZScanner
             CodeType = item.GetCodeType();
 
             if (CodeType != "VIN")
-                return ;
+                return;
 
             string? fieldValue;
 
@@ -76,9 +74,9 @@ namespace MRZScanner
         }
     }
 
-    class MyCapturedResultReceiver : CapturedResultReceiver
+    internal class Program
     {
-        public override void OnParsedResultsReceived(ParsedResult result)
+        static public void PrintResult(ParsedResult result)
         {
             FileImageTag? tag = (FileImageTag?)result.GetOriginalImageTag();
             Console.WriteLine("File: " + tag?.GetFilePath());
@@ -98,29 +96,7 @@ namespace MRZScanner
             }
             Console.WriteLine();
         }
-    }
-    class MyImageSourceStateListener : IImageSourceStateListener
-    {
-        private CaptureVisionRouter cvr;
-        public MyImageSourceStateListener(CaptureVisionRouter cvr)
-        {
-            this.cvr = cvr;
-        }
 
-        public void OnImageSourceStateReceived(EnumImageSourceState state)
-        {
-            if (state == EnumImageSourceState.ISS_EXHAUSTED)
-            {
-                if (cvr != null)
-                {
-                    cvr.StopCapturing();
-                }
-            }
-        }
-    }
-
-    internal class Program
-    {
         static void Main(string[] args)
         {
             Console.WriteLine("*************************************************");
@@ -130,8 +106,9 @@ namespace MRZScanner
             int errorCode = 1;
             string errorMsg;
 
-            // You can request and extend a trial license from https://www.dynamsoft.com/customer/license/trialLicense?product=cvs&utm_source=samples
-            // The string "DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9" here is a free public trial license. Note that network connection is required for this license to work.
+            // Initialize license.
+            // You can request and extend a trial license from https://www.dynamsoft.com/customer/license/trialLicense?product=dcv&utm_source=samples&package=dotnet
+            // The string 'DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9' here is a free public trial license. Note that network connection is required for this license to work.
             errorCode = LicenseManager.InitLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9", out errorMsg);
             if (errorCode != (int)EnumErrorCode.EC_OK && errorCode != (int)EnumErrorCode.EC_LICENSE_CACHE_USED)
             {
@@ -140,69 +117,72 @@ namespace MRZScanner
             else
             {
                 using (CaptureVisionRouter cvr = new CaptureVisionRouter())
-                using (DirectoryFetcher fetcher = new DirectoryFetcher())
                 {
-                    errorCode = cvr.InitSettingsFromFile("VIN.json", out errorMsg);
-                    if (errorCode != (int)EnumErrorCode.EC_OK)
+                    while (true)
                     {
-                        Console.WriteLine("VIN template initialization failed: " + errorMsg);
-                    }
-                    else
-                    {
-                        while(true)
+                        Console.WriteLine("\n>> Step 1: Enter the image path (or 'Q'/'q' to quit):");
+                        string? imagePath = Console.ReadLine();
+                        if (string.IsNullOrEmpty(imagePath))
                         {
-                            Console.WriteLine("\n>> Step 1: Enter the image directory path (or 'Q'/'q' to quit):");
-                            string? imagePath = Console.ReadLine();
-                            if (string.IsNullOrEmpty(imagePath))
-                            {
-                                Console.WriteLine("Invalid directory path.");
-                                continue;
-                            }
-                            if (imagePath.ToLower() == "q")
-                            {
-                                return;
-                            }
-                            if (!Directory.Exists(imagePath))
-                            {
-                                Console.WriteLine("The directory does not exist.");
-                                continue;
-                            }
-
-                            fetcher.SetDirectory(imagePath);
-                            cvr.SetInput(fetcher);
-
-                            CapturedResultReceiver receiver = new MyCapturedResultReceiver();
-                            cvr.AddResultReceiver(receiver);
-
-                            MyImageSourceStateListener listener = new MyImageSourceStateListener(cvr);
-                            cvr.AddImageSourceStateListener(listener);
-
-                            int iNum = 0;
-                            string templateName = string.Empty;
-
-                            do
-                            {
-                                Console.WriteLine("\n>> Step 2: Choose a Mode Number");
-                                Console.WriteLine("   1. Read VIN from Barcode");
-                                Console.WriteLine("   2. Read VIN from Text");
-
-                                if (!int.TryParse(Console.ReadLine(), out iNum))
-                                {
-                                    Console.WriteLine("Invalid number.");
-                                    iNum = 0;
-                                }
-                            } while (iNum < 1 || iNum > 2);
-
-                            if (iNum == 1)
-                                templateName = "ReadVINBarcode";
-                            else if (iNum == 2)
-                                templateName = "ReadVINText";
-
-                            errorCode = cvr.StartCapturing(templateName, true, out errorMsg);
+                            Console.WriteLine("Invalid path.");
+                            continue;
                         }
+                        if (imagePath.ToLower() == "q")
+                        {
+                            return;
+                        }
+                        string imagePathTrim = imagePath.Trim('\"');
+                        if (!File.Exists(imagePathTrim))
+                        {
+                            Console.WriteLine("The image does not exist.");
+                            continue;
+                        }
+                        int iNum = 0;
+                        string templateName = string.Empty;
 
+                        do
+                        {
+                            Console.WriteLine("\n>> Step 2: Choose a Mode Number");
+                            Console.WriteLine("   1. Read VIN from Barcode");
+                            Console.WriteLine("   2. Read VIN from Text");
+
+                            if (!int.TryParse(Console.ReadLine(), out iNum))
+                            {
+                                Console.WriteLine("Invalid number.");
+                                iNum = 0;
+                            }
+                        } while (iNum < 1 || iNum > 2);
+
+                        if (iNum == 1)
+                            templateName = "ReadVINBarcode";
+                        else if (iNum == 2)
+                            templateName = "ReadVINText";
+
+                        using (CapturedResult? result = cvr.Capture(imagePathTrim, templateName))
+                        {
+                            if (result == null)
+                            {
+                                Console.WriteLine("No parsed results.");
+                            }
+                            else
+                            {
+
+                                if (result.GetErrorCode() != 0)
+                                {
+                                    Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
+                                }
+                                ParsedResult? parsedResult = result.GetParsedResult();
+                                if (parsedResult == null || parsedResult.GetItems().Length == 0)
+                                {
+                                    Console.WriteLine("No parsed results.");
+                                }
+                                else
+                                {
+                                    PrintResult(parsedResult);
+                                }
+                            }
+                        }
                     }
-
                 }
             }
             Console.WriteLine("Press Enter to quit...");
