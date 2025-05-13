@@ -2,22 +2,24 @@
 using Dynamsoft.CVR;
 using Dynamsoft.License;
 using Dynamsoft.DCP;
+using System;
+using System.IO;
 
 namespace DriverLicenseScanner
 {
     class DriverLicenseResult
     {
-        public string? CodeType { get; set; }
-        public string? VersionNumber { get; set; }
-        public string? LicenseNumber { get; set; }
-        public string? VehicleClass { get; set; }
-        public string? FullName { get; set; }
-        public string? LastName { get; set; }
-        public string? GivenName { get; set; }
-        public string? Gender { get; set; }
-        public string? BirthDate { get; set; }
-        public string? IssuedDate { get; set; }
-        public string? ExpirationDate { get; set; }
+        public string CodeType { get; set; }
+        public string VersionNumber { get; set; }
+        public string LicenseNumber { get; set; }
+        public string VehicleClass { get; set; }
+        public string FullName { get; set; }
+        public string LastName { get; set; }
+        public string GivenName { get; set; }
+        public string Gender { get; set; }
+        public string BirthDate { get; set; }
+        public string IssuedDate { get; set; }
+        public string ExpirationDate { get; set; }
 
         public DriverLicenseResult(ParsedResultItem item)
         {
@@ -103,9 +105,9 @@ namespace DriverLicenseScanner
     {
         public static void PrintResult(ParsedResult result)
         {
-            FileImageTag? tag = (FileImageTag?)result.GetOriginalImageTag();
+            FileImageTag tag = (FileImageTag)result.GetOriginalImageTag();
             Console.WriteLine("File: " + tag?.GetFilePath());
-            if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK)
+            if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK && result.GetErrorCode() != (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
             {
                 Console.WriteLine("Error: " + result.GetErrorString());
             }
@@ -124,6 +126,8 @@ namespace DriverLicenseScanner
 
         static void Main(string[] args)
         {
+            System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
             Console.WriteLine("**********************************************************");
             Console.WriteLine("Welcome to Dynamsoft Capture Vision - DriverLicense Sample");
             Console.WriteLine("**********************************************************");
@@ -141,13 +145,13 @@ namespace DriverLicenseScanner
             }
             else
             {
-                using (CaptureVisionRouter cvr = new CaptureVisionRouter())
+                using (CaptureVisionRouter cvRouter = new CaptureVisionRouter())
                 {
                     while (true)
                     {
                         Console.WriteLine("\n>> Input your image full path:");
                         Console.WriteLine("\n>> 'Enter' for sample image or 'Q'/'q' to quit");
-                        string? imagePath = Console.ReadLine();
+                        string imagePath = Console.ReadLine();
 
                         if (imagePath.ToLower() == "q")
                         {
@@ -157,30 +161,35 @@ namespace DriverLicenseScanner
                         {
                             imagePath = "../../../../../../Images/driver-license-sample.jpg";
                         }
-                        string imagePathTrim = imagePath.Trim('\"');
-                        if (!File.Exists(imagePathTrim))
+                        imagePath = imagePath.Trim('\"');
+                        if (!File.Exists(imagePath))
                         {
                             Console.WriteLine("The image does not exist.");
                             continue;
                         }
 
-                        using (CapturedResult? result = cvr.Capture(imagePathTrim, "ReadDriversLicense"))
+                        CapturedResult[] results = cvRouter.CaptureMultiPages(imagePath, "ReadDriversLicense");
+                        if (results == null)
                         {
-                            if (result == null)
+                            Console.WriteLine("No parsed results.");
+                        }
+                        else
+                        {
+                            for (int index = 0; index < results.Length; index++)
                             {
-                                Console.WriteLine("No parsed results.");
-                            }
-                            else
-                            {
-
-                                if (result.GetErrorCode() != 0)
+                                CapturedResult result = results[index];
+                                if (result.GetErrorCode() == (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
+                                {
+                                    Console.WriteLine("Warning: " + result.GetErrorCode() + ", " + result.GetErrorString());
+                                }
+                                else if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK)
                                 {
                                     Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
                                 }
-                                ParsedResult? parsedResult = result.GetParsedResult();
+                                ParsedResult parsedResult = result.GetParsedResult();
                                 if (parsedResult == null || parsedResult.GetItems().Length == 0)
                                 {
-                                    Console.WriteLine("No parsed results.");
+                                    Console.WriteLine("Page-" + (index + 1) + " No parsed results.");
                                 }
                                 else
                                 {

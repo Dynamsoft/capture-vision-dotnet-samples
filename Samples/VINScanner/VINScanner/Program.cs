@@ -2,19 +2,21 @@
 using Dynamsoft.CVR;
 using Dynamsoft.License;
 using Dynamsoft.DCP;
+using System;
+using System.IO;
 
 namespace MRZScanner
 {
     class VINResult
     {
-        public string? CodeType { get; set; }
-        public string? WMI { get; set; }
-        public string? Region { get; set; }
-        public string? VDS { get; set; }
-        public string? VIS { get; set; }
-        public string? ModelYear { get; set; }
-        public string? PlantCode { get; set; }
-        public string? VinString { get; set; }
+        public string CodeType { get; set; }
+        public string WMI { get; set; }
+        public string Region { get; set; }
+        public string VDS { get; set; }
+        public string VIS { get; set; }
+        public string ModelYear { get; set; }
+        public string PlantCode { get; set; }
+        public string VinString { get; set; }
 
         public VINResult(ParsedResultItem item)
         {
@@ -23,7 +25,7 @@ namespace MRZScanner
             if (CodeType != "VIN")
                 return;
 
-            string? fieldValue;
+            string fieldValue;
 
             fieldValue = item.GetFieldValue("vinString");
             if (fieldValue != null)
@@ -78,9 +80,9 @@ namespace MRZScanner
     {
         static public void PrintResult(ParsedResult result)
         {
-            FileImageTag? tag = (FileImageTag?)result.GetOriginalImageTag();
+            FileImageTag tag = (FileImageTag)result.GetOriginalImageTag();
             Console.WriteLine("File: " + tag?.GetFilePath());
-            if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK)
+            if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK && result.GetErrorCode() != (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
             {
                 Console.WriteLine("Error: " + result.GetErrorString());
             }
@@ -99,6 +101,8 @@ namespace MRZScanner
 
         static void Main(string[] args)
         {
+            System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
             Console.WriteLine("*************************************************");
             Console.WriteLine("Welcome to Dynamsoft Capture Vision - VIN Sample");
             Console.WriteLine("*************************************************");
@@ -116,12 +120,12 @@ namespace MRZScanner
             }
             else
             {
-                using (CaptureVisionRouter cvr = new CaptureVisionRouter())
+                using (CaptureVisionRouter cvRouter = new CaptureVisionRouter())
                 {
                     while (true)
                     {
                         Console.WriteLine("\n>> Step 1: Enter the image path (or 'Q'/'q' to quit):");
-                        string? imagePath = Console.ReadLine();
+                        string imagePath = Console.ReadLine();
                         if (string.IsNullOrEmpty(imagePath))
                         {
                             Console.WriteLine("Invalid path.");
@@ -131,8 +135,8 @@ namespace MRZScanner
                         {
                             return;
                         }
-                        string imagePathTrim = imagePath.Trim('\"');
-                        if (!File.Exists(imagePathTrim))
+                        imagePath = imagePath.Trim('\"');
+                        if (!File.Exists(imagePath))
                         {
                             Console.WriteLine("The image does not exist.");
                             continue;
@@ -158,23 +162,28 @@ namespace MRZScanner
                         else if (iNum == 2)
                             templateName = "ReadVINText";
 
-                        using (CapturedResult? result = cvr.Capture(imagePathTrim, templateName))
+                        CapturedResult[] results = cvRouter.CaptureMultiPages(imagePath, templateName);
+                        if (results == null)
                         {
-                            if (result == null)
+                            Console.WriteLine("No parsed results.");
+                        }
+                        else
+                        {
+                            for (int index = 0; index < results.Length; index++)
                             {
-                                Console.WriteLine("No parsed results.");
-                            }
-                            else
-                            {
-
-                                if (result.GetErrorCode() != 0)
+                                CapturedResult result = results[index];
+                                if (result.GetErrorCode() == (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
+                                {
+                                    Console.WriteLine("Warning: " + result.GetErrorCode() + ", " + result.GetErrorString());
+                                }
+                                else if (result.GetErrorCode() != 0)
                                 {
                                     Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
                                 }
-                                ParsedResult? parsedResult = result.GetParsedResult();
+                                ParsedResult parsedResult = result.GetParsedResult();
                                 if (parsedResult == null || parsedResult.GetItems().Length == 0)
                                 {
-                                    Console.WriteLine("No parsed results.");
+                                    Console.WriteLine("Page-" + (index + 1) + " No parsed results.");
                                 }
                                 else
                                 {

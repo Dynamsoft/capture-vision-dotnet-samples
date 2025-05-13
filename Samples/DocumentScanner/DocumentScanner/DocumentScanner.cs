@@ -3,6 +3,8 @@ using Dynamsoft.License;
 using Dynamsoft.Core;
 using Dynamsoft.Utility;
 using Dynamsoft.DDN;
+using System;
+using System.IO;
 
 namespace DocumentScanner
 {
@@ -10,6 +12,8 @@ namespace DocumentScanner
     {
         static void Main(string[] args)
         {
+            System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
             int errorCode = 1;
             string errorMsg;
 
@@ -23,13 +27,13 @@ namespace DocumentScanner
             }
             else
             {
-                using (CaptureVisionRouter cvr = new CaptureVisionRouter())
+                using (CaptureVisionRouter cvRouter = new CaptureVisionRouter())
                 {
                     while (true)
                     {
                         Console.WriteLine("\n>> Input your image full path:");
                         Console.WriteLine("\n>> 'Enter' for sample image or 'Q'/'q' to quit");
-                        string? imageFile = Console.ReadLine();                        
+                        string imageFile = Console.ReadLine();                        
                         if (imageFile.ToLower() == "q")
                         {
                             return;
@@ -38,47 +42,57 @@ namespace DocumentScanner
                         {
                             imageFile = "../../../../../../Images/document-sample.jpg";
                         }
-                        string imagePathTrim = imageFile.Trim('\"');
-                        if (!File.Exists(imagePathTrim))
+                        imageFile = imageFile.Trim('\"');
+                        if (!File.Exists(imageFile))
                         {
                             Console.WriteLine("The image does not exist.");
                             continue;
                         }
 
-                        using (CapturedResult? result = cvr.Capture(imageFile, PresetTemplate.PT_DETECT_AND_NORMALIZE_DOCUMENT))
+                        CapturedResult[] results = cvRouter.CaptureMultiPages(imageFile, PresetTemplate.PT_DETECT_AND_NORMALIZE_DOCUMENT);
+                        if (results == null)
                         {
-                            if (result == null)
+                            Console.WriteLine("No document found.");
+                        }
+                        else
+                        {
+                            for (int index = 0; index < results.Length; index++)
                             {
-                                Console.WriteLine("No normalized documents.");
-                            }
-                            else
-                            {
-                                if (result.GetErrorCode() != 0)
+                                CapturedResult result = results[index];
+                                if (result.GetErrorCode() == (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
+                                {
+                                    Console.WriteLine("Warning: " + result.GetErrorCode() + ", " + result.GetErrorString());
+                                }
+                                else if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK)
                                 {
                                     Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
                                 }
-                                NormalizedImagesResult? normalizedImagesResult = result.GetNormalizedImagesResult();
-                                if (normalizedImagesResult != null)
+                                ProcessedDocumentResult processedDocumentResult = result.GetProcessedDocumentResult();
+                                if (processedDocumentResult == null || processedDocumentResult.GetDeskewedImageResultItems().Length == 0)
                                 {
-                                    NormalizedImageResultItem[] items = normalizedImagesResult.GetItems();
-                                    Console.WriteLine("Normalized " + items.Length + " documents");
-                                    foreach (NormalizedImageResultItem normalizedItem in items)
+                                    Console.WriteLine("Page-" + (index + 1) + " No document found.");
+                                }
+                                else
+                                {
+                                    DeskewedImageResultItem[] items = processedDocumentResult.GetDeskewedImageResultItems();
+                                    Console.WriteLine("Page-" + (index + 1) + " Deskewed " + items.Length + " documents");
+                                    for (int i = 0; i < items.Length; i++)
                                     {
-                                        string outPath = "normalizedResult_" + Array.IndexOf(items, normalizedItem) + ".png";
-                                        ImageManager imageManager = new ImageManager();
-                                        var image = normalizedItem.GetImageData();
+                                        DeskewedImageResultItem deskewedResult = items[i];
+                                        string outPath = "Page_" + (index + 1) + "deskewedResult_" + i + ".png";
+                                        ImageIO imageIo = new ImageIO();
+                                        var image = deskewedResult.GetImageData();
                                         if (image != null)
                                         {
-                                            errorCode = imageManager.SaveToFile(image, outPath);
+                                            errorCode = imageIo.SaveToFile(image, outPath);
                                             if (errorCode == 0)
                                             {
-                                                Console.WriteLine("Document " + Array.IndexOf(items, normalizedItem) + " file: " + outPath);
+                                                Console.WriteLine("Document " + i + " file: " + outPath);
                                             }
                                         }
                                     }
                                 }
                             }
-
                         }
                     }
 
