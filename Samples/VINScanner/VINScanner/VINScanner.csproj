@@ -12,6 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dynamsoft.DotNet.CaptureVision.Bundle" Version="3.0.4000" />
+    <PackageReference Include="Dynamsoft.DotNet.CaptureVision.Bundle" Version="3.0.6000" />
   </ItemGroup>
 </Project>
