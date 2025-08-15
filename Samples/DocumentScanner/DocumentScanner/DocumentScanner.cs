@@ -68,20 +68,20 @@ namespace DocumentScanner
                                     Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
                                 }
                                 ProcessedDocumentResult processedDocumentResult = result.GetProcessedDocumentResult();
-                                if (processedDocumentResult == null || processedDocumentResult.GetDeskewedImageResultItems().Length == 0)
+                                if (processedDocumentResult == null || processedDocumentResult.GetEnhancedImageResultItems().Length == 0)
                                 {
                                     Console.WriteLine("Page-" + (index + 1) + " No document found.");
                                 }
                                 else
                                 {
-                                    DeskewedImageResultItem[] items = processedDocumentResult.GetDeskewedImageResultItems();
-                                    Console.WriteLine("Page-" + (index + 1) + " Deskewed " + items.Length + " documents");
+                                    EnhancedImageResultItem[] items = processedDocumentResult.GetEnhancedImageResultItems();
+                                    Console.WriteLine("Page-" + (index + 1) + " Enhanced " + items.Length + " documents");
                                     for (int i = 0; i < items.Length; i++)
                                     {
-                                        DeskewedImageResultItem deskewedResult = items[i];
-                                        string outPath = "Page_" + (index + 1) + "deskewedResult_" + i + ".png";
+                                        EnhancedImageResultItem enhancedResult = items[i];
+                                        string outPath = "Page_" + (index + 1) + "enhancedResult_" + i + ".png";
                                         ImageIO imageIo = new ImageIO();
-                                        var image = deskewedResult.GetImageData();
+                                        var image = enhancedResult.GetImageData();
                                         if (image != null)
                                         {
                                             errorCode = imageIo.SaveToFile(image, outPath);
