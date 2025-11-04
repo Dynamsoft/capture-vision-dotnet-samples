@@ -167,14 +167,18 @@ namespace GS1AIScanner
                                     Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
                                 }
 
+                                FileImageTag tag = result.GetOriginalImageTag() as FileImageTag;
+                                int pageNumber = tag != null ? tag.GetPageNumber() : index;
+
                                 DecodedBarcodesResult barcodeResult = result.GetDecodedBarcodesResult();
                                 ParsedResult parsedResult = result.GetParsedResult();
                                 if (barcodeResult == null || barcodeResult.GetItems().Length == 0 || parsedResult == null || parsedResult.GetItems().Length == 0)
                                 {
-                                    Console.WriteLine("Page-" + (index + 1) + " No parsed results.");
+                                    Console.WriteLine("Page-" + (pageNumber + 1) + " No parsed results.");
                                 }
                                 else
                                 {
+                                    Console.WriteLine("Page-" + (pageNumber + 1) + " Parsed.");
                                     PrintResult(barcodeResult, parsedResult);
                                 }
                             }

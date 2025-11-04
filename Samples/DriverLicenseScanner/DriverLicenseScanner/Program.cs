@@ -186,13 +186,19 @@ namespace DriverLicenseScanner
                                 {
                                     Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
                                 }
+
+
+                                FileImageTag tag = result.GetOriginalImageTag() as FileImageTag;
+                                int pageNumber = tag != null ? tag.GetPageNumber() : index;
+
                                 ParsedResult parsedResult = result.GetParsedResult();
                                 if (parsedResult == null || parsedResult.GetItems().Length == 0)
                                 {
-                                    Console.WriteLine("Page-" + (index + 1) + " No parsed results.");
+                                    Console.WriteLine("Page-" + (pageNumber + 1) + " No parsed results.");
                                 }
                                 else
                                 {
+                                    Console.WriteLine("Page-" + (pageNumber + 1) + " Parsed.");
                                     PrintResult(parsedResult);
                                 }
                             }

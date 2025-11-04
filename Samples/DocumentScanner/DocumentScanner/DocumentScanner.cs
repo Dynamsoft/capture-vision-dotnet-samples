@@ -67,19 +67,23 @@ namespace DocumentScanner
                                 {
                                     Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
                                 }
+
+                                FileImageTag tag = result.GetOriginalImageTag() as FileImageTag;
+                                int pageNumber = tag != null ? tag.GetPageNumber() : index;
+
                                 ProcessedDocumentResult processedDocumentResult = result.GetProcessedDocumentResult();
                                 if (processedDocumentResult == null || processedDocumentResult.GetEnhancedImageResultItems().Length == 0)
                                 {
-                                    Console.WriteLine("Page-" + (index + 1) + " No document found.");
+                                    Console.WriteLine("Page-" + (pageNumber + 1) + " No document found.");
                                 }
                                 else
                                 {
                                     EnhancedImageResultItem[] items = processedDocumentResult.GetEnhancedImageResultItems();
-                                    Console.WriteLine("Page-" + (index + 1) + " Enhanced " + items.Length + " documents");
+                                    Console.WriteLine("Page-" + (pageNumber + 1) + " Enhanced " + items.Length + " documents");
                                     for (int i = 0; i < items.Length; i++)
                                     {
                                         EnhancedImageResultItem enhancedResult = items[i];
-                                        string outPath = "Page_" + (index + 1) + "enhancedResult_" + i + ".png";
+                                        string outPath = "Page_" + (pageNumber + 1) + "enhancedResult_" + i + ".png";
                                         ImageIO imageIo = new ImageIO();
                                         var image = enhancedResult.GetImageData();
                                         if (image != null)
