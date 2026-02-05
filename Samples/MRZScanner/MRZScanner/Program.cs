@@ -1,13 +1,110 @@
 ﻿using Dynamsoft.Core;
+using Dynamsoft.Core.intermediate_results;
 using Dynamsoft.CVR;
-using Dynamsoft.License;
+using Dynamsoft.DDN;
+using Dynamsoft.DDN.intermediate_results;
 using Dynamsoft.DCP;
+using Dynamsoft.DLR.intermediate_results;
+using Dynamsoft.IdUtility;
+using Dynamsoft.License;
+using Dynamsoft.Utility;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace MRZScanner
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
+    class PortraitZoneData
+    {
+        public ScaledColourImageUnit scaledColourImageUnit;
+        public LocalizedTextLinesUnit localizedTextLinesUnit;
+        public RecognizedTextLinesUnit recognizedTextLinesUnit;
+        public DetectedQuadsUnit detectedQuadsUnit;
+        public DeskewedImageUnit deskewedImageUnit;
+    }
+
+    class MyIntermediateResultReceiver : IntermediateResultReceiver
+    {
+        private Dictionary<string, PortraitZoneData> portraitZoneDataDict = new Dictionary<string, PortraitZoneData>();
+
+        public override void OnScaledColourImageUnitReceived(ScaledColourImageUnit result, IntermediateResultExtraInfo info)
+        {
+            string hashId = result.GetOriginalImageHashId();
+            PortraitZoneData data = getData(hashId);
+            data.scaledColourImageUnit = result;
+        }
+
+        public override void OnLocalizedTextLinesReceived(LocalizedTextLinesUnit result, IntermediateResultExtraInfo info)
+        {
+            if (info.isSectionLevelResult)
+            {
+                string hashId = result.GetOriginalImageHashId();
+                PortraitZoneData data = getData(hashId);
+                data.localizedTextLinesUnit = result;
+            }
+        }
+
+        public override void OnRecognizedTextLinesReceived(RecognizedTextLinesUnit result, IntermediateResultExtraInfo info)
+        {
+            if (info.isSectionLevelResult)
+            {
+                string hashId = result.GetOriginalImageHashId();
+                PortraitZoneData data = getData(hashId);
+                data.recognizedTextLinesUnit = result;
+            }
+        }
+
+        public override void OnDetectedQuadsReceived(DetectedQuadsUnit result, IntermediateResultExtraInfo info)
+        {
+            if (!info.isSectionLevelResult)
+            {
+                string hashId = result.GetOriginalImageHashId();
+                PortraitZoneData data = getData(hashId);
+                data.detectedQuadsUnit = result;
+            }
+        }
+
+        public override void OnDeskewedImageReceived(DeskewedImageUnit result, IntermediateResultExtraInfo info)
+        {
+            if (info.isSectionLevelResult)
+            {
+                string hashId = result.GetOriginalImageHashId();
+                PortraitZoneData data = getData(hashId);
+                data.deskewedImageUnit = result;
+            }
+        }
+
+        public int GetPortraitZone(string hashId, out Quadrilateral quad)
+        {
+            quad = null;
+            PortraitZoneData data = getData(hashId);
+            if (data != null)
+            {
+                IdentityProcessor idProcessor = new IdentityProcessor();
+                return idProcessor.FindPortraitZone(
+                        data.scaledColourImageUnit,
+                        data.localizedTextLinesUnit,
+                        data.recognizedTextLinesUnit,
+                        data.detectedQuadsUnit,
+                        data.deskewedImageUnit,
+                        out quad);
+            }
+            return -1;
+        }
+
+        private PortraitZoneData getData(string hashId)
+        {
+            lock (portraitZoneDataDict)
+            {
+                if (!portraitZoneDataDict.ContainsKey(hashId))
+                {
+                    portraitZoneDataDict[hashId] = new PortraitZoneData();
+                }
+                return portraitZoneDataDict[hashId];
+            }
+        }
+    }
 
     class MRZResult
     {
@@ -20,7 +117,7 @@ namespace MRZScanner
         public string gender;
         public string surname;
         public string givenname;
-
+        public bool isPassport;
         public List<string> rawText = new List<string>();
 
         public MRZResult(ParsedResultItem item)
@@ -33,6 +130,7 @@ namespace MRZScanner
                 {
                     docId = item.GetFieldValue("passportNumber");
                 }
+                isPassport = true;
             }
             else if (item.GetFieldValidationStatus("documentNumber") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("documentNumber") != null)
             {
@@ -124,24 +222,141 @@ namespace MRZScanner
 
     internal class Program
     {
-        public static void PrintResult(ParsedResult result)
+        private static ImageData GetOriginalImage(CapturedResult result)
         {
-            FileImageTag tag = (FileImageTag)result.GetOriginalImageTag();
-            Console.WriteLine("File: " + tag?.GetFilePath());
-            if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK && result.GetErrorCode() != (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
+            CapturedResultItem[] items = result.GetItems();
+            foreach (var item in items)
             {
-                Console.WriteLine("Error: " + result.GetErrorString());
+                if (item is OriginalImageResultItem originalImageResultItem)
+                {
+                    return originalImageResultItem.GetImageData();
+                }
+            }
+            return null;
+        }
+
+        private static void SaveProcessedDocumentResult(CapturedResult result, int pageNumber, string imagePathPrefix)
+        {
+            Console.WriteLine("Extract and save the normalized document image.");
+
+            ProcessedDocumentResult docResult = result.GetProcessedDocumentResult();
+            EnhancedImageResultItem[] enhancedImageResultItems = docResult != null ? docResult.GetEnhancedImageResultItems() : null;
+            if (enhancedImageResultItems == null || enhancedImageResultItems.Length == 0)
+            {
+                Console.WriteLine("Page-" + pageNumber + " No normalized document result found.");
+                return;
+            }
+
+            EnhancedImageResultItem enhancedImageResultItem = enhancedImageResultItems[0];
+            string outputPath = imagePathPrefix + pageNumber + "_document.png";
+            ImageIO imgIO = new ImageIO();
+            ImageData enhancedImage = enhancedImageResultItem.GetImageData();
+            if (enhancedImage != null)
+            {
+                int errorCode = imgIO.SaveToFile(enhancedImage, outputPath);
+                if (errorCode == (int)EnumErrorCode.EC_OK)
+                    Console.WriteLine("Document file: " + outputPath);
+                else
+                    Console.WriteLine("Save document file failed, error code: " + errorCode);
+            }
+        }
+
+        private static void SavePortraitZone(MyIntermediateResultReceiver irReceiver, string hashId, ImageData originalImageData, int pageNumber, string imagePathPrefix)
+        {
+            Console.WriteLine("Extract and save the portrait zone image.");
+
+            if (originalImageData == null)
+            {
+                Console.WriteLine("Page-" + pageNumber + " Original image data not exists.");
+                return;
+            }
+
+            Quadrilateral quad;
+            int errorCode = irReceiver.GetPortraitZone(hashId, out quad);
+            if (errorCode != (int)EnumErrorCode.EC_OK)
+            {
+                Console.WriteLine("Page-" + pageNumber + " No portrait zone found, error code: " + errorCode);
+                return;
+            }
+
+            ImageProcessor imgProcessor = new ImageProcessor();
+            ImageData croppedImage;
+            croppedImage = imgProcessor.CropAndDeskewImage(originalImageData, quad, 0, 0, 0, out errorCode);
+            if (errorCode != (int)EnumErrorCode.EC_OK)
+            {
+                Console.WriteLine("Crop image failed, error code: " + errorCode);
+                return;
+            }
+
+            string outputPath = imagePathPrefix + pageNumber + "_portrait.png";
+            ImageIO imgIO = new ImageIO();
+            errorCode = imgIO.SaveToFile(croppedImage, outputPath);
+            if (errorCode == (int)EnumErrorCode.EC_OK)
+            {
+                Console.WriteLine("Portrait file: " + outputPath);
             }
             else
             {
-                ParsedResultItem[] items = result.GetItems();
-                Console.WriteLine("Detected " + items.Length + " MRZ Result(s).");
-                foreach (var item in items)
+                Console.WriteLine("Save portrait file failed, error code: " + errorCode);
+            }
+        }
+
+        private static void ProcessResult(CapturedResult result, MyIntermediateResultReceiver irReceiver, int printIndex)
+        {
+            if (result.GetErrorCode() == (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
+            {
+                Console.WriteLine("Warning: " + result.GetErrorCode() + ", " + result.GetErrorString());
+            }
+            else if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK)
+            {
+                Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
+            }
+
+            int pageNumber = printIndex + 1;
+            string imagePathPrefix = "";
+
+            FileImageTag tag = result.GetOriginalImageTag() as FileImageTag;
+            if (tag != null)
+            {
+                imagePathPrefix = Path.GetFileNameWithoutExtension(tag.GetFilePath()) + "_";
+
+                pageNumber = tag.GetPageNumber() + 1;
+                Console.WriteLine("File: " + tag.GetFilePath());
+                Console.WriteLine("Page: " + pageNumber);
+            }
+
+            ParsedResult parsedResult = result.GetParsedResult();
+            ParsedResultItem[] parsedResultItems = parsedResult != null ? parsedResult.GetItems() : null;
+            if (parsedResultItems == null || parsedResultItems.Length == 0)
+            {
+                Console.WriteLine("No parsed results in page " + pageNumber + ".");
+                return;
+            }
+
+            string hashId = result.GetOriginalImageHashId();
+            bool isPassport = false;
+            if (parsedResult.GetErrorCode() != (int)EnumErrorCode.EC_OK && parsedResult.GetErrorCode() != (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
+            {
+                Console.WriteLine("Error: " + parsedResult.GetErrorCode() + ", " + parsedResult.GetErrorString());
+            }
+            else
+            {
+                foreach (ParsedResultItem parsedResultItem in parsedResultItems)
                 {
-                    var mrzResult = new MRZResult(item);
-                    Console.WriteLine(mrzResult.ToString());
+                    MRZResult mrzResult = new MRZResult(parsedResultItem);
+                    Console.WriteLine(mrzResult);
+                    if (!isPassport)
+                        isPassport = mrzResult.isPassport;
                 }
             }
+
+            if (isPassport)
+            {
+                ImageData originalImage = GetOriginalImage(result);
+                SaveProcessedDocumentResult(result, pageNumber, imagePathPrefix);
+                SavePortraitZone(irReceiver, hashId, originalImage, pageNumber, imagePathPrefix);
+            }
+
             Console.WriteLine();
         }
 
@@ -160,13 +375,14 @@ namespace MRZScanner
             // You can request and extend a trial license from https://www.dynamsoft.com/customer/license/trialLicense?product=dcv&utm_source=samples&package=dotnet
             // The string 'DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9' here is a free public trial license. Note that network connection is required for this license to work.
             errorCode = LicenseManager.InitLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9", out errorMsg);
-            if (errorCode != (int)EnumErrorCode.EC_OK && errorCode != (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
+            if (errorCode != (int)EnumErrorCode.EC_OK && errorCode != (int)EnumErrorCode.EC_LICENSE_WARNING)
             {
                 Console.WriteLine("License initialization failed: ErrorCode: " + errorCode + ", ErrorString: " + errorMsg);
             }
             else
             {
                 using (CaptureVisionRouter cvRouter = new CaptureVisionRouter())
+                using (IntermediateResultManager irManager = cvRouter.GetIntermediateResultManager())
                 {
                     while (true)
                     {
@@ -188,7 +404,11 @@ namespace MRZScanner
                             continue;
                         }
 
+                        MyIntermediateResultReceiver irReceiver = new MyIntermediateResultReceiver();
+                        irManager.AddResultReceiver(irReceiver);
                         CapturedResult[] results = cvRouter.CaptureMultiPages(imagePath, "ReadPassportAndId");
+                        irManager.RemoveResultReceiver(irReceiver);
+
                         if (results == null || results.Length == 0)
                         {
                             Console.WriteLine("No parsed results.");
@@ -197,29 +417,7 @@ namespace MRZScanner
                         {
                             for (int index = 0; index < results.Length; index++)
                             {
-                                CapturedResult result = results[index];
-                                if (result.GetErrorCode() == (int)EnumErrorCode.EC_UNSUPPORTED_JSON_KEY_WARNING)
-                                {
-                                    Console.WriteLine("Warning: " + result.GetErrorCode() + ", " + result.GetErrorString());
-                                }
-                                else if (result.GetErrorCode() != (int)EnumErrorCode.EC_OK)
-                                {
-                                    Console.WriteLine("Error: " + result.GetErrorCode() + ", " + result.GetErrorString());
-                                }
-
-                                FileImageTag tag = result.GetOriginalImageTag() as FileImageTag;
-                                int pageNumber = tag != null ? tag.GetPageNumber() : index;
-
-                                ParsedResult parsedResult = result.GetParsedResult();
-                                if (parsedResult == null || parsedResult.GetItems().Length == 0)
-                                {
-                                    Console.WriteLine("Page-" + (pageNumber + 1) + " No parsed results.");
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Page-" + (pageNumber + 1) + " Parsed.");
-                                    PrintResult(parsedResult);
-                                }
+                                ProcessResult(results[index], irReceiver, index);
                             }
                         }
                     }
