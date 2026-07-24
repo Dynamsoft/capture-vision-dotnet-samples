@@ -4,19 +4,21 @@ This repository contains multiple samples that demonstrate how to use the [Dynam
 
 ## System Requirements
 
-- Windows:
-  - Supported Versions: Windows 8 and higher, or Windows Server 2012 and higher
-  - Architecture: x64 and x86
-  - Development Environment: Visual Studio 2012 or higher.
+### Supported Platforms
 
-- Linux:
-  - Supported Distributions: Ubuntu 14.04.4+ LTS, Debian 8+, CentOS 7+
-  - Architectures: x64
-  - Minimum GLIBC Version: GLIBC_2.18 or higher
+**Windows**
+- Supported Versions: Windows 8 and higher, or Windows Server 2012 and higher
+- Architectures: x64, x86
 
-- Supported .NET versions
-  - .NET Framework 3.5 and above
-  - .NET 6, 7, 8
+**Linux**
+- Supported Distributions: Ubuntu 16.04+ LTS, Debian 8+, CentOS 7+
+- Architectures: x64
+- Dependencies: glibc 2.17 or higher
+
+### Runtime Environment
+
+- .NET Framework 3.5 and above
+- .NET 6, 7, 8, 9, 10
 
 ## Samples
 

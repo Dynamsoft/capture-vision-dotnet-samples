@@ -1,106 +1,15 @@
 ﻿using Dynamsoft.Core;
 using Dynamsoft.CVR;
-using Dynamsoft.License;
 using Dynamsoft.DCP;
+using Dynamsoft.License;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Xml.Linq;
 
 namespace DriverLicenseScanner
 {
-    class DriverLicenseResult
-    {
-        public string CodeType { get; set; }
-        public string VersionNumber { get; set; }
-        public string LicenseNumber { get; set; }
-        public string VehicleClass { get; set; }
-        public string FullName { get; set; }
-        public string LastName { get; set; }
-        public string GivenName { get; set; }
-        public string Gender { get; set; }
-        public string BirthDate { get; set; }
-        public string IssuedDate { get; set; }
-        public string ExpirationDate { get; set; }
-
-        public DriverLicenseResult(ParsedResultItem item)
-        {
-            CodeType = item.GetCodeType();
-
-            if (CodeType != "AAMVA_DL_ID" && CodeType != "AAMVA_DL_ID_WITH_MAG_STRIPE" && CodeType != "SOUTH_AFRICA_DL")
-                return;
-
-            if (item.GetFieldValidationStatus("licenseNumber") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("licenseNumber") != null)
-            {
-                LicenseNumber = item.GetFieldValue("licenseNumber");
-            }
-            if (item.GetFieldValidationStatus("AAMVAVersionNumber") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("AAMVAVersionNumber") != null)
-            {
-                VersionNumber = item.GetFieldValue("AAMVAVersionNumber");
-            }
-            if (item.GetFieldValidationStatus("vehicleClass") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("vehicleClass") != null)
-            {
-                VehicleClass = item.GetFieldValue("vehicleClass");
-            }
-            if (item.GetFieldValidationStatus("lastName") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("lastName") != null)
-            {
-                LastName = item.GetFieldValue("lastName");
-            }
-            if (item.GetFieldValidationStatus("surName") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("surName") != null)
-            {
-                LastName = item.GetFieldValue("surName");
-            }
-            if (item.GetFieldValidationStatus("givenName") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("givenName") != null)
-            {
-                GivenName = item.GetFieldValue("givenName");
-            }
-            if (item.GetFieldValidationStatus("fullName") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("fullName") != null)
-            {
-                FullName = item.GetFieldValue("fullName");
-            }
-            if (item.GetFieldValidationStatus("sex") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("sex") != null)
-            {
-                Gender = item.GetFieldValue("sex");
-            }
-            if (item.GetFieldValidationStatus("gender") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("gender") != null)
-            {
-                Gender = item.GetFieldValue("gender");
-            }
-            if (item.GetFieldValidationStatus("birthDate") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("birthDate") != null)
-            {
-                BirthDate = item.GetFieldValue("birthDate");
-            }
-            if (item.GetFieldValidationStatus("issuedDate") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("issuedDate") != null)
-            {
-                IssuedDate = item.GetFieldValue("issuedDate");
-            }
-            if (item.GetFieldValidationStatus("expirationDate") != EnumValidationStatus.VS_FAILED && item.GetFieldValue("expirationDate") != null)
-            {
-                ExpirationDate = item.GetFieldValue("expirationDate");
-            }
-
-            if (string.IsNullOrEmpty(FullName))
-            {
-                FullName = LastName + GivenName;
-            }
-        }
-
-        public override string ToString()
-        {
-            return $"Parsed Information:\n" +
-                   $"\tCode Type: {CodeType}\n" +
-                   $"\tLicense Number: {LicenseNumber}\n" +
-                   $"\tVehicle Class: {VehicleClass}\n" +
-                   $"\tLast Name: {LastName}\n" +
-                   $"\tGiven Name: {GivenName}\n" +
-                   $"\tFull Name: {FullName}\n" +
-                   $"\tGender: {Gender}\n" +
-                   $"\tDate of Birth: {BirthDate}\n" +
-                   $"\tIssued Date: {IssuedDate}\n" +
-                   $"\tExpiration Date: {ExpirationDate}\n";
-        }
-    }
-
-
-
     internal class Program
     {
         public static void PrintResult(ParsedResult result)
@@ -117,8 +26,165 @@ namespace DriverLicenseScanner
                 Console.WriteLine("Detected " + items.Length + " Driver License(s).");
                 foreach (var item in items)
                 {
-                    var dlResult = new DriverLicenseResult(item);
-                        Console.WriteLine(dlResult.ToString());
+                    string codeType = item.GetCodeType();
+                    List<KeyValuePair<string, string>> printMap = new List<KeyValuePair<string, string>>();
+                    printMap.Add(new KeyValuePair<string, string>("Code Type", codeType));
+                    if (codeType == "AAMVA_DL_ID")
+                    {
+                        // For full field list and details, please refer to the documentation:
+                        // https://www.dynamsoft.com/code-parser/docs/core/code-types/aamva-dl-id.html?lang=dotnet#aamva_dl_id-fields
+                        string licenseNumber = item.GetFieldValue("licenseNumber");
+                        if (!string.IsNullOrEmpty(licenseNumber) && item.GetFieldValidationStatus("licenseNumber") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("License Number", licenseNumber));
+                        }
+                        string vehicleClass = item.GetFieldValue("vehicleClass");
+                        if (!string.IsNullOrEmpty(vehicleClass) && item.GetFieldValidationStatus("vehicleClass") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Vehicle Class", vehicleClass));
+                        }
+                        string fullName = item.GetFieldValue("fullName");
+                        if (!string.IsNullOrEmpty(fullName) && item.GetFieldValidationStatus("fullName") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Full Name", fullName));
+                        }
+                        else
+                        {
+                            string givenName = item.GetFieldValue("givenName");
+                            if (!string.IsNullOrEmpty(givenName) && item.GetFieldValidationStatus("givenName") != EnumValidationStatus.VS_FAILED)
+                            {
+                                fullName = givenName;
+                                string lastName = item.GetFieldValue("lastName");
+                                if (!string.IsNullOrEmpty(lastName) && item.GetFieldValidationStatus("lastName") != EnumValidationStatus.VS_FAILED)
+                                {
+                                    fullName += " " + lastName;
+                                }
+                                printMap.Add(new KeyValuePair<string, string>("Full Name", fullName));
+                            }
+                            else
+                            {
+
+                                string firstName = item.GetFieldValue("firstName");
+                                string middleName = item.GetFieldValue("middleName");
+                                string lastName = item.GetFieldValue("lastName");
+                                if (!string.IsNullOrEmpty(firstName) || !string.IsNullOrEmpty(middleName) || !string.IsNullOrEmpty(lastName))
+                                {
+                                    if (item.GetFieldValidationStatus("firstName") == EnumValidationStatus.VS_FAILED)
+                                    {
+                                        firstName = null;
+                                    }
+                                    if (item.GetFieldValidationStatus("middleName") == EnumValidationStatus.VS_FAILED)
+                                    {
+                                        middleName = null;
+                                    }
+                                    if (item.GetFieldValidationStatus("lastName") == EnumValidationStatus.VS_FAILED)
+                                    {
+                                        lastName = null;
+                                    }
+                                    fullName = (firstName ?? "") + (string.IsNullOrEmpty(middleName) ? "" : " " + middleName) + (string.IsNullOrEmpty(lastName) ? "" : " " + lastName);
+                                    printMap.Add(new KeyValuePair<string, string>("Full Name", fullName));
+                                }
+                            }
+                        }
+                        string sex = item.GetFieldValue("sex");
+                        if (item.GetFieldValidationStatus("sex") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Sex", sex));
+                        }
+                        string expirationDate = item.GetFieldValue("expirationDate");
+                        if (!string.IsNullOrEmpty(expirationDate) && item.GetFieldValidationStatus("expirationDate") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Expiration Date", expirationDate));
+                        }
+                    }
+                    else if (codeType == "AAMVA_DL_ID_WITH_MAG_STRIPE")
+                    {
+                        // For full field list and details, please refer to the documentation:
+                        // https://www.dynamsoft.com/code-parser/docs/core/code-types/aamva-dl-id.html?lang=dotnet#aamva_dl_id_with_mag_stripe-fields
+
+                        string licenseNumber = item.GetFieldValue("DLorID_Number");
+                        if (!string.IsNullOrEmpty(licenseNumber) && item.GetFieldValidationStatus("DLorID_Number") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("License Number", licenseNumber));
+                        }
+                        string isoIIN = item.GetFieldValue("ISOIIN");
+                        if (!string.IsNullOrEmpty(isoIIN) && item.GetFieldValidationStatus("ISOIIN") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("ISO IIN", isoIIN));
+                        }
+                        string name = item.GetFieldValue("name");
+                        if (!string.IsNullOrEmpty(name) && item.GetFieldValidationStatus("name") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Name", name));
+                        }
+                        string sex = item.GetFieldValue("sex");
+                        if (!string.IsNullOrEmpty(sex) && item.GetFieldValidationStatus("sex") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Sex", sex));
+                        }
+                        string expirationDate = item.GetFieldValue("expirationDate");
+                        if (!string.IsNullOrEmpty(expirationDate) && item.GetFieldValidationStatus("expirationDate") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Expiration Date", expirationDate));
+                        }
+                    }
+                    else if (codeType == "SOUTH_AFRICA_DL")
+                    {
+                        // For full field list and details, please refer to the documentation:
+                        // https://www.dynamsoft.com/code-parser/docs/core/code-types/za-dl.html?lang=dotnet#fields
+
+                        string idNumber = item.GetFieldValue("idNumber");
+                        if (!string.IsNullOrEmpty(idNumber) && item.GetFieldValidationStatus("idNumber") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("ID Number", idNumber));
+                        }
+                        string licenseNumber = item.GetFieldValue("licenseNumber");
+                        if (!string.IsNullOrEmpty(licenseNumber) && item.GetFieldValidationStatus("licenseNumber") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("License Number", licenseNumber));
+                        }
+                        string vehicleLicense = item.GetFieldValue("vehicleLicense");
+                        if (!string.IsNullOrEmpty(vehicleLicense) && item.GetFieldValidationStatus("vehicleLicense") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Vehicle License", vehicleLicense));
+                        }
+                        string surname = item.GetFieldValue("surname");
+                        string initials = item.GetFieldValue("initials");
+                        if (!string.IsNullOrEmpty(surname) || !string.IsNullOrEmpty(initials))
+                        {
+                            if (item.GetFieldValidationStatus("surname") == EnumValidationStatus.VS_FAILED)
+                            {
+                                surname = null;
+                            }
+                            if (item.GetFieldValidationStatus("initials") == EnumValidationStatus.VS_FAILED)
+                            {
+                                initials = null;
+                            }
+                            string name = (surname ?? "") + (string.IsNullOrEmpty(initials) ? "" : " " + initials);
+                            printMap.Add(new KeyValuePair<string, string>("Name", name));
+                        }
+                        string gender = item.GetFieldValue("gender");
+                        if (!string.IsNullOrEmpty(gender) && item.GetFieldValidationStatus("gender") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("Gender", gender));
+                        }
+                        string licenseValidityTo = item.GetFieldValue("licenseValidityTo");
+                        if (!string.IsNullOrEmpty(licenseValidityTo) && item.GetFieldValidationStatus("licenseValidityTo") != EnumValidationStatus.VS_FAILED)
+                        {
+                            printMap.Add(new KeyValuePair<string, string>("License Valid To", licenseValidityTo));
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unsupported code type: " + codeType);
+                        continue;
+                    }
+                    Console.WriteLine("Parsed Information:");
+                    foreach (var pair in printMap)
+                    {
+                        Console.WriteLine("\t" + pair.Key + ": " + pair.Value);
+                    }
+                    Console.WriteLine();
                 }
             }
             Console.WriteLine();
